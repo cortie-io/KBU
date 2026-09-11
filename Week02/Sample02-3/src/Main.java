@@ -1,11 +1,20 @@
 void main() {
-    Scanner Keyboard = new Scanner(System.in);
-    int radius;
-    double area;
-    System.out.print("원의 반지름 입력(정수형)? ");
-    radius = Keyboard.nextInt();
+    // Scanner 객체 생성
+    Scanner scanner = new Scanner(System.in);
 
-    area = 3.141592 * radius * radius;
+    // 이름 입력 받기
+    System.out.print("이름을 입력하세요: ");
+    String name = scanner.nextLine();
 
-    System.out.printf("원의 반지름 : %d Cm, 면적 : %.2f \u33A0",radius,area);
+    // 나이 입력 받기
+    System.out.print("나이를 입력하세요: ");
+    int age = scanner.nextInt();
+
+    // 입력받은 값 출력하기
+    System.out.println("\n--- 입력 결과 ---");
+    System.out.println("이름: " + name);
+    System.out.println("나이: " + age + "세");
+    // Scanner 닫기 (메모리 누수 방지)
+    scanner.close();
+
 }
