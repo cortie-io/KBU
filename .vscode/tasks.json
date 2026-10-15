@@ -1,0 +1,15 @@
+{
+  // Cmd+Shift+B : 지금 열려 있는 Java 파일 실행
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Java 실행 (현재 파일)",
+      "type": "shell",
+      "command": "java ${fileBasename}",
+      "options": { "cwd": "${fileDirname}" },
+      "group": { "kind": "build", "isDefault": true },
+      "presentation": { "reveal": "always", "focus": true, "panel": "shared", "clear": true },
+      "problemMatcher": []
+    }
+  ]
+}

@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+# kbu - KBU Java 실습 도우미
+#   kbu new 8 sample08-1   새 실습 만들기 (week08/sample08-1/src/Main.java)
+#   kbu run [폴더]          실행 (폴더 생략 시 지금 위치 또는 마지막으로 고친 Main.java)
+#   kbu ls [주차]           실습 목록 보기
+#   kbu save [메시지]        커밋 + push
+#   kbu go [주차]           KBU(또는 해당 주차) 폴더로 이동한 셸 열기
+
+KBU="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+B=$'\e[1m'; G=$'\e[32m'; C=$'\e[36m'; Y=$'\e[33m'; R=$'\e[31m'; N=$'\e[0m'
+
+week_dir() { printf "%s/week%02d" "$KBU" "$((10#$1))"; }
+
+find_main() {
+    local t="$1"
+    if [ -n "$t" ]; then
+        [ -d "$t" ] || t="$KBU/$t"
+        [ -f "$t/src/Main.java" ] && { echo "$t/src/Main.java"; return; }
+        [ -f "$t/Main.java" ] && { echo "$t/Main.java"; return; }
+        [ -f "$t" ] && { echo "$t"; return; }
+        return 1
+    fi
+    [ -f src/Main.java ] && { echo "$PWD/src/Main.java"; return; }
+    [ -f Main.java ] && { echo "$PWD/Main.java"; return; }
+    # 마지막으로 수정한 Main.java
+    find "$KBU" -name Main.java -not -path "*/out/*" -not -path "*/.git/*" -printf "%T@ %p\n" \
+        | sort -nr | head -1 | cut -d' ' -f2-
+}
+
+cmd_new() {
+    local wk="$1" name="$2"
+    if [ -z "$wk" ]; then echo "사용법: kbu new <주차> [이름]   예) kbu new 8 sample08-1"; exit 1; fi
+    local wd; wd="$(week_dir "$wk")"
+    if [ -z "$name" ]; then   # 이름 생략 시 sampleNN-다음번호
+        local n=1; while [ -d "$wd/$(printf "sample%02d-%d" "$((10#$wk))" $n)" ]; do n=$((n+1)); done
+        name="$(printf "sample%02d-%d" "$((10#$wk))" $n)"
+    fi
+    local d="$wd/$name"
+    if [ -e "$d" ]; then echo "${R}이미 있음:${N} ${d#$KBU/}"; exit 1; fi
+    mkdir -p "$d/src"
+    cat > "$d/src/Main.java" <<'JAVA'
+void main() {
+    Scanner keyboard = new Scanner(System.in);
+
+}
+JAVA
+    cat > "$d/$name.iml" <<'IML'
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="JAVA_MODULE" version="4">
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
+    <exclude-output />
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>
+IML
+    echo "${G}만들었어요:${N} ${d#$KBU/}/src/Main.java"
+    command -v code >/dev/null && code "$d/src/Main.java"
+    echo "실행: ${C}kbu run ${d#$KBU/}${N}"
+}
+
+cmd_run() {
+    local f; f="$(find_main "$1")" || true
+    if [ -z "$f" ] || [ ! -f "$f" ]; then echo "${R}Main.java를 못 찾았어요:${N} $1"; exit 1; fi
+    echo "${B}${C}▶ ${f#$KBU/}${N}"
+    echo "${C}────────────────────────────────────────${N}"
+    cd "$(dirname "$f")" && java "$(basename "$f")"
+    local rc=$?
+    echo "${C}────────────────────────────────────────${N}"
+    [ $rc -eq 0 ] && echo "${G}✔ 종료${N}" || echo "${R}✘ 오류 (exit $rc)${N}"
+    return $rc
+}
+
+cmd_ls() {
+    local base="$KBU"; [ -n "$1" ] && base="$(week_dir "$1")"
+    find "$base" -path "*/src/Main.java" -not -path "*/out/*" | sed "s|^$KBU/||; s|/src/Main.java$||" | sort -V
+}
+
+cmd_save() {
+    cd "$KBU" || exit 1
+    if [ -z "$(git status --porcelain)" ]; then echo "바뀐 게 없어요."; exit 0; fi
+    git status --short
+    local msg="${*:-$(date +%m월%d일) 실습}"
+    git add -A && git commit -q -m "$msg" && git push -q && echo "${G}✔ 저장 + push 완료:${N} $msg"
+}
+
+cmd_go() {
+    local d="$KBU"; [ -n "$1" ] && d="$(week_dir "$1")"
+    cd "$d" && exec "$SHELL" -l
+}
+
+cmd_help() { sed -n '2,7p' "$0" | sed 's/^# \{0,1\}//'; }
+
+case "$1" in
+    new)  shift; cmd_new "$@" ;;
+    run|r) shift; cmd_run "$@" ;;
+    ls)   shift; cmd_ls "$@" ;;
+    save) shift; cmd_save "$@" ;;
+    go)   shift; cmd_go "$@" ;;
+    ""|help|-h|--help) cmd_help ;;
+    *)    cmd_run "$@" ;;   # kbu week07/report04-2 처럼 바로 실행
+esac
